@@ -2,7 +2,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
 const asyncHandler = require("../utils/asyncHandler");
@@ -48,9 +48,7 @@ router.post("/forgot-password", asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "Enter a valid email address." });
   }
 
-  const smtpConfigured = process.env.SMTP_HOST && process.env.SMTP_USER &&
-    process.env.SMTP_PASS && process.env.SMTP_FROM;
-  if (!smtpConfigured) {
+  if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
     return res.status(503).json({ success: false, message: "Password reset email is not configured on the server yet." });
   }
 
@@ -63,21 +61,19 @@ router.post("/forgot-password", asyncHandler(async (req, res) => {
 
     const clientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/$/, "");
     const resetUrl = `${clientUrl}/?resetToken=${rawToken}`;
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: String(process.env.SMTP_SECURE).toLowerCase() === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-    });
-
+    const resend = new Resend(process.env.RESEND_API_KEY);
     try {
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM,
-        to: user.email,
+      const { error } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [user.email],
         subject: "Reset your TaskFlow password",
         text: `We received a request to reset your TaskFlow password. This link expires in 15 minutes: ${resetUrl}\n\nIf you did not request this, you can ignore this email.`,
         html: `<p>We received a request to reset your TaskFlow password.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in 15 minutes. If you did not request this, you can ignore this email.</p>`
       });
+      if (error) {
+        console.error("Resend email API error:", error);
+        throw new Error("Password reset email could not be sent.");
+      }
     } catch (error) {
       user.passwordResetToken = undefined;
       user.passwordResetExpires = undefined;
