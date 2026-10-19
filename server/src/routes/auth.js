@@ -9,8 +9,12 @@ const asyncHandler = require("../utils/asyncHandler");
 
 const router = express.Router();
 
-function issueToken(userId) {
-  return jwt.sign({ userId: String(userId) }, process.env.JWT_SECRET, { expiresIn: "7d" });
+function issueToken(userId, rememberMe = false) {
+  return jwt.sign(
+    { userId: String(userId) },
+    process.env.JWT_SECRET,
+    { expiresIn: rememberMe ? "30d" : "7d" }
+  );
 }
 
 router.post("/register", asyncHandler(async (req, res) => {
@@ -124,7 +128,7 @@ router.post("/login", asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    token: issueToken(user._id),
+    token: issueToken(user._id, req.body.rememberMe === true),
     data: { _id: user._id, name: user.name, email: user.email }
   });
 }));
