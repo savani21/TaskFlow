@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Activity, ArrowDownRight, ArrowUpRight, Bell, Check, ChevronDown,
   CircleHelp, ClipboardList, Clock3, FolderKanban, LayoutDashboard,
-  LogOut, Menu, Plus, Search, Settings2, Sparkles, Users, X
+  LogOut, Menu, Plus, Search, Settings2, Sparkles, Users, X, Eye, EyeOff
 } from "lucide-react";
 import { api } from "./api";
 
@@ -24,6 +24,8 @@ function App() {
   const [authMode, setAuthMode] = useState(() => resetToken ? "reset" : "login");
   const [authForm, setAuthForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [authBusy, setAuthBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -271,8 +273,8 @@ function App() {
             <form onSubmit={handleAuth} className="form-stack">
               {authMode === "register" && <label>Full name<input value={authForm.name} onChange={e => setAuthForm({ ...authForm, name: e.target.value })} placeholder="e.g. Avani Savani" required minLength="2" autoComplete="name" /></label>}
               {authMode !== "reset" && <label>Email address<input type="email" autoComplete="email" value={authForm.email} onChange={e => setAuthForm({ ...authForm, email: e.target.value })} placeholder="you@example.com" required /></label>}
-              {(authMode === "login" || authMode === "register" || authMode === "reset") && <label>Password<input type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} value={authForm.password} onChange={e => setAuthForm({ ...authForm, password: e.target.value })} placeholder="At least 8 characters" minLength="8" maxLength="128" required /></label>}
-              {(authMode === "register" || authMode === "reset") && <label>Confirm password<input type="password" autoComplete="new-password" value={authForm.confirmPassword} onChange={e => setAuthForm({ ...authForm, confirmPassword: e.target.value })} placeholder="Enter your password again" minLength="8" maxLength="128" required /></label>}
+              {(authMode === "login" || authMode === "register" || authMode === "reset") && <label>Password<div className="password-input-wrap"><input type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} value={authForm.password} onChange={e => setAuthForm({ ...authForm, password: e.target.value })} placeholder="At least 8 characters" minLength="8" maxLength="128" required /><button type="button" className="password-toggle" onClick={() => setShowPassword(current => !current)} aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>}
+              {(authMode === "register" || authMode === "reset") && <label>Confirm password<div className="password-input-wrap"><input type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" value={authForm.confirmPassword} onChange={e => setAuthForm({ ...authForm, confirmPassword: e.target.value })} placeholder="Enter your password again" minLength="8" maxLength="128" required /><button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(current => !current)} aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} title={showConfirmPassword ? "Hide password" : "Show password"}>{showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>}
               {authMode === "login" && <div className="auth-forgot-row"><button type="button" className="auth-forgot-link" onClick={() => { setAuthMode("forgot"); setNotice(""); }}>Forgot password?</button></div>}
               <button className="button button-primary button-wide" disabled={authBusy}>{authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : authMode === "register" ? "Create account" : authMode === "forgot" ? "Send reset link" : "Reset password"} <ArrowUpRight size={17} /></button>
             </form>
