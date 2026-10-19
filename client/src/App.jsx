@@ -20,8 +20,9 @@ function dateLabel(value) {
 
 function App() {
   const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState("login");
-  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "" });
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get("resetToken") || "");
+  const [authMode, setAuthMode] = useState(() => resetToken ? "reset" : "login");
+  const [authForm, setAuthForm] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [authBusy, setAuthBusy] = useState(false);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
@@ -64,7 +65,7 @@ function App() {
   }
 
   useEffect(() => {
-    if (!localStorage.getItem("taskflow_token")) return;
+    if (resetToken || !localStorage.getItem("taskflow_token")) return;
     loadMe().catch(() => {
       localStorage.removeItem("taskflow_token");
       setUser(null);
@@ -99,9 +100,37 @@ function App() {
 
   async function handleAuth(event) {
     event.preventDefault();
-    setAuthBusy(true);
     setNotice("");
+
+    if ((authMode === "register" || authMode === "reset") && authForm.password !== authForm.confirmPassword) {
+      setNotice("Passwords do not match.");
+      return;
+    }
+
+    setAuthBusy(true);
     try {
+      if (authMode === "forgot") {
+        await api("/auth/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ email: authForm.email })
+        });
+        setNotice("If an account exists for that email, a password reset link has been sent.");
+        return;
+      }
+
+      if (authMode === "reset") {
+        await api("/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({ token: resetToken, password: authForm.password })
+        });
+        localStorage.removeItem("taskflow_token");
+        window.history.replaceState({}, "", window.location.pathname);
+        setAuthForm({ name: "", email: "", password: "", confirmPassword: "" });
+        setAuthMode("login");
+        setNotice("Password reset successfully. You can now sign in.");
+        return;
+      }
+
       const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
       const result = await api(endpoint, { method: "POST", body: JSON.stringify(authForm) });
       localStorage.setItem("taskflow_token", result.token);
@@ -235,17 +264,19 @@ function App() {
           <div className="auth-mobile-brand brand"><span className="brand-mark"><Sparkles size={20} /></span> taskflow</div>
           <div className="auth-card">
             <div className="auth-heading">
-              <span className="eyebrow">{authMode === "login" ? "WELCOME BACK" : "GET STARTED"}</span>
-              <h2>{authMode === "login" ? "Sign in to TaskFlow" : "Create your account"}</h2>
-              <p>{authMode === "login" ? "Pick up where you left off." : "A more organized workday starts here."}</p>
+              <span className="eyebrow">{authMode === "login" ? "WELCOME BACK" : authMode === "register" ? "GET STARTED" : authMode === "forgot" ? "ACCOUNT RECOVERY" : "SECURE YOUR ACCOUNT"}</span>
+              <h2>{authMode === "login" ? "Sign in to TaskFlow" : authMode === "register" ? "Create your account" : authMode === "forgot" ? "Forgot your password?" : "Set a new password"}</h2>
+              <p>{authMode === "login" ? "Pick up where you left off." : authMode === "register" ? "A more organized workday starts here." : authMode === "forgot" ? "Enter your email and we’ll send a reset link if an account exists." : "Choose a new password for your TaskFlow account."}</p>
             </div>
             <form onSubmit={handleAuth} className="form-stack">
-              {authMode === "register" && <label>Full name<input value={authForm.name} onChange={e => setAuthForm({ ...authForm, name: e.target.value })} placeholder="e.g. Avani Savani" required minLength="2" /></label>}
-              <label>Email address<input type="email" autoComplete="email" value={authForm.email} onChange={e => setAuthForm({ ...authForm, email: e.target.value })} placeholder="you@example.com" required /></label>
-              <label>Password<input type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} value={authForm.password} onChange={e => setAuthForm({ ...authForm, password: e.target.value })} placeholder="At least 8 characters" minLength="8" required /></label>
-              <button className="button button-primary button-wide" disabled={authBusy}>{authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : "Create account"} <ArrowUpRight size={17} /></button>
+              {authMode === "register" && <label>Full name<input value={authForm.name} onChange={e => setAuthForm({ ...authForm, name: e.target.value })} placeholder="e.g. Avani Savani" required minLength="2" autoComplete="name" /></label>}
+              {authMode !== "reset" && <label>Email address<input type="email" autoComplete="email" value={authForm.email} onChange={e => setAuthForm({ ...authForm, email: e.target.value })} placeholder="you@example.com" required /></label>}
+              {(authMode === "login" || authMode === "register" || authMode === "reset") && <label>Password<input type="password" autoComplete={authMode === "login" ? "current-password" : "new-password"} value={authForm.password} onChange={e => setAuthForm({ ...authForm, password: e.target.value })} placeholder="At least 8 characters" minLength="8" maxLength="128" required /></label>}
+              {(authMode === "register" || authMode === "reset") && <label>Confirm password<input type="password" autoComplete="new-password" value={authForm.confirmPassword} onChange={e => setAuthForm({ ...authForm, confirmPassword: e.target.value })} placeholder="Enter your password again" minLength="8" maxLength="128" required /></label>}
+              {authMode === "login" && <div className="auth-forgot-row"><button type="button" className="auth-forgot-link" onClick={() => { setAuthMode("forgot"); setNotice(""); }}>Forgot password?</button></div>}
+              <button className="button button-primary button-wide" disabled={authBusy}>{authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : authMode === "register" ? "Create account" : authMode === "forgot" ? "Send reset link" : "Reset password"} <ArrowUpRight size={17} /></button>
             </form>
-            <p className="auth-switch">{authMode === "login" ? "New to TaskFlow?" : "Already have an account?"} <button onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "Create an account" : "Sign in"}</button></p>
+            <p className="auth-switch">{authMode === "login" ? "New to TaskFlow?" : authMode === "register" ? "Already have an account?" : "Remembered your password?"} <button onClick={() => { setAuthMode(authMode === "login" || authMode === "register" ? (authMode === "login" ? "register" : "login") : "login"); setNotice(""); }}>{authMode === "login" ? "Create an account" : authMode === "register" ? "Sign in" : "Back to sign in"}</button></p>
             <div className="auth-security"><span><Check size={14} /> Secure authentication</span><span><Check size={14} /> Your workspace</span></div>
           </div>
           <p className="auth-legal">By continuing, you agree to use TaskFlow responsibly.</p>
