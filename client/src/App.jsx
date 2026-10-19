@@ -26,6 +26,7 @@ function App() {
   const [authBusy, setAuthBusy] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [tasks, setTasks] = useState([]);
@@ -67,9 +68,10 @@ function App() {
   }
 
   useEffect(() => {
-    if (resetToken || !localStorage.getItem("taskflow_token")) return;
+    if (resetToken || (!localStorage.getItem("taskflow_token") && !sessionStorage.getItem("taskflow_token"))) return;
     loadMe().catch(() => {
       localStorage.removeItem("taskflow_token");
+      sessionStorage.removeItem("taskflow_token");
       setUser(null);
     });
   }, []);
@@ -126,6 +128,7 @@ function App() {
           body: JSON.stringify({ token: resetToken, password: authForm.password })
         });
         localStorage.removeItem("taskflow_token");
+        sessionStorage.removeItem("taskflow_token");
         window.history.replaceState({}, "", window.location.pathname);
         setAuthForm({ name: "", email: "", password: "", confirmPassword: "" });
         setAuthMode("login");
@@ -143,8 +146,13 @@ function App() {
         return;
       }
 
-      const result = await api("/auth/login", { method: "POST", body: JSON.stringify(authForm) });
-      localStorage.setItem("taskflow_token", result.token);
+      const result = await api("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: authForm.email, password: authForm.password, rememberMe })
+      });
+      localStorage.removeItem("taskflow_token");
+      sessionStorage.removeItem("taskflow_token");
+      (rememberMe ? localStorage : sessionStorage).setItem("taskflow_token", result.token);
       setAuthForm({ name: "", email: "", password: "", confirmPassword: "" });
       setShowPassword(false);
       setShowConfirmPassword(false);
@@ -160,7 +168,7 @@ function App() {
 
   function logout() {
     localStorage.removeItem("taskflow_token");
-    sessionStorage.clear();
+    sessionStorage.removeItem("taskflow_token");
     window.location.replace(window.location.pathname);
   }
 
@@ -284,7 +292,7 @@ function App() {
               {authMode !== "reset" && <label>Email address<input type="email" autoComplete="email" value={authForm.email} onChange={e => setAuthForm({ ...authForm, email: e.target.value })} placeholder="you@example.com" required /></label>}
               {(authMode === "login" || authMode === "register" || authMode === "reset") && <label>Password<div className="password-input-wrap"><input type={showPassword ? "text" : "password"} autoComplete={authMode === "login" ? "current-password" : "new-password"} value={authForm.password} onChange={e => setAuthForm({ ...authForm, password: e.target.value })} placeholder="At least 8 characters" minLength="8" maxLength="128" required /><button type="button" className="password-toggle" onClick={() => setShowPassword(current => !current)} aria-label={showPassword ? "Hide password" : "Show password"} title={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>}
               {(authMode === "register" || authMode === "reset") && <label>Confirm password<div className="password-input-wrap"><input type={showConfirmPassword ? "text" : "password"} autoComplete="new-password" value={authForm.confirmPassword} onChange={e => setAuthForm({ ...authForm, confirmPassword: e.target.value })} placeholder="Enter your password again" minLength="8" maxLength="128" required /><button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(current => !current)} aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"} title={showConfirmPassword ? "Hide password" : "Show password"}>{showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>}
-              {authMode === "login" && <div className="auth-forgot-row"><button type="button" className="auth-forgot-link" onClick={() => { setAuthMode("forgot"); setNotice(""); }}>Forgot password?</button></div>}
+              {authMode === "login" && <div className="auth-login-options"><label className="remember-me"><input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} /> <span>Remember me for 30 days</span></label><button type="button" className="auth-forgot-link" onClick={() => { setAuthMode("forgot"); setNotice(""); }}>Forgot password?</button></div>}
               <button className="button button-primary button-wide" disabled={authBusy}>{authBusy ? "Please wait..." : authMode === "login" ? "Sign in" : authMode === "register" ? "Create account" : authMode === "forgot" ? "Send reset link" : "Reset password"} <ArrowUpRight size={17} /></button>
             </form>
             <p className="auth-switch">{authMode === "login" ? "New to TaskFlow?" : authMode === "register" ? "Already have an account?" : "Remembered your password?"} <button onClick={() => { setAuthMode(authMode === "login" || authMode === "register" ? (authMode === "login" ? "register" : "login") : "login"); setNotice(""); }}>{authMode === "login" ? "Create an account" : authMode === "register" ? "Sign in" : "Back to sign in"}</button></p>
