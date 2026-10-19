@@ -1,7 +1,7 @@
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 export function getToken() {
-  return localStorage.getItem("taskflow_token");
+  return localStorage.getItem("taskflow_token") || sessionStorage.getItem("taskflow_token");
 }
 
 export async function api(path, options = {}) {
