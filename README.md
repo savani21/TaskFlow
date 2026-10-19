@@ -40,17 +40,13 @@ PORT=5000
 MONGODB_URI=mongodb+srv://YOUR_USER:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/taskflow?retryWrites=true&w=majority
 JWT_SECRET=replace_with_a_long_random_secret
 CLIENT_URL=http://localhost:5173
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=your_smtp_username
-SMTP_PASS=your_smtp_password_or_app_password
-SMTP_FROM=TaskFlow <no-reply@example.com>
+RESEND_API_KEY=re_your_resend_api_key
+RESEND_FROM_EMAIL=onboarding@resend.dev
 ```
 
-Configure the SMTP variables with credentials from your email provider to enable password resets. For Gmail, use an App Password rather than your regular account password. Set `CLIENT_URL` to your deployed frontend origin in Render (for example, `https://task-flow-tan-six-64.vercel.app`). Reset links expire after 15 minutes and can be used only once.
+Configure `RESEND_API_KEY` and `RESEND_FROM_EMAIL` using your Resend dashboard. The Resend test sender is restricted to permitted test recipients; for sending to other users, verify a domain in Resend and use an address on that domain. Set `CLIENT_URL` to your frontend origin (for example, `https://task-flow-tan-six-64.vercel.app`). Reset links expire after 15 minutes and can be used only once.
 
-Do not commit `.env` or share your real connection string or SMTP credentials.
+Do not commit `.env` or share your API key or database credentials.
 
 Start the API:
 ```bash
@@ -97,4 +93,4 @@ Open the local URL printed by Vite, usually http://localhost:5173.
 - Use a strong production `JWT_SECRET`; never reuse or publish local secrets.
 
 ## Notes
-This is a learning MVP, not a security-audited production SaaS. Before production use, add automated tests, rate limiting, stronger operational logging, email verification/password reset, and a reviewed cookie-based authentication strategy. The sample uses a bearer JWT stored in browser local storage for simplicity; local storage can be exposed by XSS, so harden the app before handling sensitive data.
+This is a learning MVP, not a security-audited production SaaS. Before production use, add automated tests, rate limiting, stronger operational logging, email verification, and a reviewed cookie-based authentication strategy. The sample uses a bearer JWT stored in browser local storage for simplicity; local storage can be exposed by XSS, so harden the app before handling sensitive data.
