@@ -133,12 +133,24 @@ function App() {
         return;
       }
 
-      const endpoint = authMode === "login" ? "/auth/login" : "/auth/register";
-      const result = await api(endpoint, { method: "POST", body: JSON.stringify(authForm) });
+      if (authMode === "register") {
+        await api("/auth/register", { method: "POST", body: JSON.stringify(authForm) });
+        setAuthForm({ name: "", email: "", password: "", confirmPassword: "" });
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+        setAuthMode("login");
+        setNotice("Account created successfully. Please sign in.");
+        return;
+      }
+
+      const result = await api("/auth/login", { method: "POST", body: JSON.stringify(authForm) });
       localStorage.setItem("taskflow_token", result.token);
+      setAuthForm({ name: "", email: "", password: "", confirmPassword: "" });
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       setUser(result.data);
       await loadProjects(true);
-      setNotice(authMode === "login" ? "Welcome back!" : "Account created. Welcome to TaskFlow!");
+      setNotice("Welcome back!");
     } catch (error) {
       setNotice(error.message);
     } finally {
@@ -148,11 +160,8 @@ function App() {
 
   function logout() {
     localStorage.removeItem("taskflow_token");
-    setUser(null);
-    setProjects([]);
-    setTasks([]);
-    setSelectedProject("");
-    setNotice("You have signed out.");
+    sessionStorage.clear();
+    window.location.replace(window.location.pathname);
   }
 
   async function createProject(event) {
