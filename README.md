@@ -4,6 +4,8 @@ A full-stack internship portfolio project built with React, Vite, Node.js, Expre
 
 ## Features
 - User registration and login with hashed passwords
+- Registration password confirmation
+- Email-based password reset with single-use, 15-minute reset links
 - JWT-protected API routes
 - Create, edit and delete projects
 - Project membership by registered user email
@@ -38,9 +40,17 @@ PORT=5000
 MONGODB_URI=mongodb+srv://YOUR_USER:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/taskflow?retryWrites=true&w=majority
 JWT_SECRET=replace_with_a_long_random_secret
 CLIENT_URL=http://localhost:5173
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password_or_app_password
+SMTP_FROM=TaskFlow <no-reply@example.com>
 ```
 
-Do not commit `.env` or share your real connection string.
+Configure the SMTP variables with credentials from your email provider to enable password resets. For Gmail, use an App Password rather than your regular account password. Set `CLIENT_URL` to your deployed frontend origin in Render (for example, `https://task-flow-tan-six-64.vercel.app`). Reset links expire after 15 minutes and can be used only once.
+
+Do not commit `.env` or share your real connection string or SMTP credentials.
 
 Start the API:
 ```bash
